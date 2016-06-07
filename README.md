@@ -1,0 +1,1 @@
+# yonkoma2data
