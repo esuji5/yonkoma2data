@@ -1,4 +1,5 @@
 # coding: utf-8
+# require: ImageMagick
 # jpgからpngへ
 # convert -geometry 1240x1240 -density 300 -deskew 40% *.jpg -set filename:f '%t' 'image-%03d.png'
 # jpgからpdfへ
@@ -9,6 +10,7 @@ from __future__ import unicode_literals
 import os
 import sys
 import subprocess
+
 import utils
 
 DENSITY = 300  # dpi

@@ -1,4 +1,5 @@
 # coding: utf-8
+# require: zbar, ImageMagick
 # TODO: 引数で処理済みのファイルも処理対象にしたりFIND_PAGEを調整したりできるといいなあ
 from __future__ import print_function
 from __future__ import unicode_literals
@@ -10,7 +11,8 @@ import subprocess
 from time import sleep
 from urllib.error import HTTPError
 
-from bottlenose import api
+# from bottlenose import api
+import bottlenose
 from bs4 import BeautifulSoup
 
 import utils
@@ -19,8 +21,9 @@ import key_amazon_esuji as ka
 re_page = re.compile('Pages:\s*[0-9]{1,}')
 re_isbn = re.compile('(978[0-9]{10}|491[0-9]{10})')
 
-amazon_api = api.Amazon(ka.AMAZON_ACCESS_KEY_ID, ka.AMAZON_SECRET_KEY,
-                        ka.AMAZON_ASSOC_TAG, Region='JP')
+amazon_api = bottlenose.Amazon(ka.AMAZON_ACCESS_KEY_ID, ka.AMAZON_SECRET_KEY,
+                               ka.AMAZON_ASSOC_TAG, Region='JP')
+print(ka.AMAZON_ACCESS_KEY_ID, ka.AMAZON_SECRET_KEY, ka.AMAZON_ASSOC_TAG)
 FIND_PAGE = 3  # 後ろからどれだけのページを探索するか
 
 
@@ -75,7 +78,7 @@ def item_search(isbn, search_index='Books', item_page=1):
         Keywords=isbn,
         ItemPage=item_page,
         ResponseGroup='Large')
-    soup = BeautifulSoup(response, 'lxml')
+    soup = BeautifulSoup(response, 'xml')
     return soup.findAll('item')
 
 
@@ -127,6 +130,7 @@ if __name__ == '__main__':
     for pdf_path in pdf_path_list:
         isbn = pdf_to_isbn(pdf_path)
         if isbn:
+            print('find:', isbn)
             try:
                 amazon_item = fetch_amazon_item(isbn)
             except HTTPError as e:
