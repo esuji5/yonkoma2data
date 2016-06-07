@@ -11,19 +11,17 @@ import subprocess
 from time import sleep
 from urllib.error import HTTPError
 
-# from bottlenose import api
 import bottlenose
 from bs4 import BeautifulSoup
 
 import utils
-import key_amazon_esuji as ka
+import key_amazon as ka
 
 re_page = re.compile('Pages:\s*[0-9]{1,}')
 re_isbn = re.compile('(978[0-9]{10}|491[0-9]{10})')
 
-amazon_api = bottlenose.Amazon(ka.AMAZON_ACCESS_KEY_ID, ka.AMAZON_SECRET_KEY,
-                               ka.AMAZON_ASSOC_TAG, Region='JP')
-print(ka.AMAZON_ACCESS_KEY_ID, ka.AMAZON_SECRET_KEY, ka.AMAZON_ASSOC_TAG)
+amazon = bottlenose.Amazon(ka.AMAZON_ACCESS_KEY_ID, ka.AMAZON_SECRET_KEY,
+                           ka.AMAZON_ASSOC_TAG, Region='JP')
 FIND_PAGE = 3  # 後ろからどれだけのページを探索するか
 
 
@@ -47,7 +45,7 @@ def pdf_to_isbn(pdf_path):
     # 存在する一時ファイルがあれば削除しておく
     remove_tmp_img(imges_path)
 
-    # 対象のページをjpgに切り出す
+    # 対象のページを一時ファイルとしてjpgに切り出す
     argv2_h = ['pdfimages', '-j', '-l', str(FIND_PAGE), pdf_path, img_path + '_h']
     argv2_t = ['pdfimages', '-j', '-f', str(int(page) - FIND_PAGE + 1), pdf_path, img_path + '_t']
     subprocess.check_call(argv2_t)
@@ -73,22 +71,22 @@ def pdf_to_isbn(pdf_path):
 
 # AmazonのAPIを叩いてxmlを返す
 def item_search(isbn, search_index='Books', item_page=1):
-    response = amazon_api.ItemSearch(
+    response = amazon.ItemSearch(
         SearchIndex=search_index,
         Keywords=isbn,
         ItemPage=item_page,
         ResponseGroup='Large')
     soup = BeautifulSoup(response, 'xml')
-    return soup.findAll('item')
+    return soup.findAll('Item')
 
 
 # 取得したxml(item)から必要な情報を抜き出して新しいファイル名を返す
-def get_newname(item):
-    item = item[0]
+def get_newname(items):
+    item = items[0]
     name_dict = {
-        'title': item.find('title').text,
-        'author': item.find('author').text.replace(' ', '') if item.find('author') else '',
-        'publisher': item.find('publisher').text,
+        'title': item.find('Title').text,
+        'author': item.find('Author').text.replace(' ', '') if item.find('Author') else '',
+        'publisher': item.find('Publisher').text,
     }
     # ここでタイトルのフォーマットを設定する
     if '491' in isbn:
@@ -105,9 +103,11 @@ def fetch_amazon_item(isbn):
     # 5回までamazonのAPIにリクエストを投げてみる
     while(req_count < 5):
         try:
-            item = item_search(isbn)
-            if item:
-                return item
+            items = item_search(isbn)
+            if items:
+                return items
+            else:
+                return
         except HTTPError as e:
             # エラーが出たら( ˘ω˘)ｽﾔｧ
             print(e)
@@ -130,17 +130,16 @@ if __name__ == '__main__':
     for pdf_path in pdf_path_list:
         isbn = pdf_to_isbn(pdf_path)
         if isbn:
-            print('find:', isbn)
             try:
-                amazon_item = fetch_amazon_item(isbn)
+                amazon_items = fetch_amazon_item(isbn)
             except HTTPError as e:
                 print('情報の取得に失敗しました:', pdf_path, isbn)
                 continue
-
-            newname = get_newname(amazon_item)
-            # pdfファイルをリネーム
-            print(pdf_path, '->', os.path.join(pdf_dir, newname))
-            os.rename(pdf_path,
-                      os.path.join(pdf_dir, newname))
-            # API制限にかからないようにsleepを設定
-            sleep(2)
+            if amazon_items:
+                newname = get_newname(amazon_items)
+                # pdfファイルをリネーム
+                print(pdf_path, '->', os.path.join(pdf_dir, newname))
+                os.rename(pdf_path,
+                          os.path.join(pdf_dir, newname))
+                # API制限にかからないようにsleepを設定
+                sleep(2)
