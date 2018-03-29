@@ -1,8 +1,4 @@
-# coding: utf-8
 # 1ページの画像から各コマを切り出す処理
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import division
 import os
 import sys
 
@@ -15,10 +11,9 @@ import utils
 if __name__ == '__main__':
     image_dir = utils.check_argv_path(sys.argv)
     outdir_name = 'koma'
-    utils.make_outdir(image_dir, outdir_name)
-    img_path_list = utils.get_path_list(image_dir, 'png')
-
     output_path = utils.make_outdir(image_dir, outdir_name)
+    img_path_list = utils.get_path_list(image_dir, 'jpg')
+
     adc = AverageDiffCut()
 
     # 切り出し座標＝カットポイント(cp)を探すためのループ
@@ -33,7 +28,7 @@ if __name__ == '__main__':
         # 切り出し座標の探索
         cp_dict = adc.search_cut_point(img_gray)
 
-        print(idx, cp_dict, len(even_cp_list), len(odd_cp_list))
+        print(idx, cp_dict, len(cp_dict['x']), len(cp_dict['y']))
         # 切り出し座標が規定の数だけ帰ってきたらリストに追加
         if len(cp_dict['x']) == adc.cp_num_x and len(cp_dict['y']) == adc.cp_num_y:
             if idx % 2 == 1:
@@ -55,8 +50,9 @@ if __name__ == '__main__':
     print('平均切り出し座標から画像を切り出しています')
     for idx, img_path in not_cut_img_path_dict.items():
         img = cv2.imread(img_path)
+        if img is None:
+            continue
         cut_img_path = os.path.join(output_path, os.path.basename(img_path)[:-4])
-
         if idx % 2 == 1:
             adc.cutout(img, odd_page_cp, img_path=cut_img_path, padding=True, extra_cut=True)
         else:

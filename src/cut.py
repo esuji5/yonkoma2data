@@ -1,15 +1,12 @@
-# - * - coding: utf-8 - * -
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import division
-import os
 import math
+import os
+
 import cv2
 import numpy as np
 
 
 # 平均画素値誤差法
-class AverageDiffCut(object):
+class AverageDiffCut:
     cp_num_x = 4  # 横方向のカットポイント数
     cp_num_y = 8  # 縦方向のカットポイント数
     diff_threshold = 60  # 枠線があるかどうかのdiff値の境界
@@ -48,6 +45,14 @@ class AverageDiffCut(object):
                         recent_point = cp[0]
             return cp_list
 
+        # すべての縁を10px、白で塗りつぶす
+        huti_x = 30
+        huti_y = 20
+        img[0:huti_x, :] = 255
+        img[-huti_x:, :] = 255
+        img[:, 0:huti_y] = 255
+        img[:, -huti_y:] = 255
+
         # 縦方向と横方向の画素値平均をリストにする
         row_avg_list = np.average(img, axis=0)
         col_avg_list = np.average(img, axis=1)
@@ -78,8 +83,8 @@ class AverageDiffCut(object):
                     # ページ画像から1コマ画像へ一気に切り抜く場合などに使う
                     img_cut_1_4 = hybrid_cut(img=img_cut_1_4, img_path='dum-{}'.format(i // 2 + 1))
                     img_cut_5_8 = hybrid_cut(img=img_cut_5_8, img_path='dum-{}'.format(i // 2 + 5))
-                cv2.imwrite('{}-{}.png'.format(img_path, str(i // 2 + 1)), img_cut_1_4)
-                cv2.imwrite('{}-{}.png'.format(img_path, str(i // 2 + 5)), img_cut_5_8)
+                cv2.imwrite('{}-{}.jpg'.format(img_path, str(i // 2 + 1)), img_cut_1_4)
+                cv2.imwrite('{}-{}.jpg'.format(img_path, str(i // 2 + 5)), img_cut_5_8)
 
     def find_average_point(self, cp_list):
         '''カットポイントの平均を算出'''
@@ -97,7 +102,7 @@ class AverageDiffCut(object):
 
 
 # 迫り来る壁法
-class LoomingWall(object):
+class LoomingWall:
     white_threthould = 210
 
     def get_init_postions(self, img):
@@ -109,6 +114,9 @@ class LoomingWall(object):
         return (left, right, top, bottom)
 
     def search_looming_wallpoint(self, img):
+        if img is None:
+            return (0,0,0,0)
+
         # 縦・横方向それぞれの閾値より白い画素値を数える TODO:本当は0 or 1 でよい
         row_white_list = np.sum(img < self.white_threthould, axis=0)
         col_white_list = np.sum(img < self.white_threthould, axis=1)
@@ -132,89 +140,11 @@ class LoomingWall(object):
                 top = i
                 break
         # 下から走査
-        for i in range(len(col_white_list[:AverageDiffCut.padding_y + 10])):
+        for i in range(len(col_white_list[:AverageDiffCut.padding_y + 10])-1):
             if col_white_list[-(i + 1)] == 0 and col_white_list[-(i + 2)] > 0:
                 bottom = len(col_white_list) - i - 1
                 break
         return (left, right, top, bottom)
-
-
-# (WIP)一番大きい輪郭を抽出して透視変換
-class Homograph(object):
-    last_approx = None
-
-    def transform_by4(self, img, points):
-        points = sorted(points, key=lambda x: x[1])
-        if len(points) == 4:
-            top = sorted(points[:2], key=lambda x: x[0])
-            bottom = sorted(points[2:], key=lambda x: x[0], reverse=True)
-            points = np.array(top + bottom, dtype='float32')
-        else:
-            y_min, y_max = points[0][1], points[-1][1]
-            points = sorted(points, key=lambda x: x[0])
-            x_min, x_max = points[0][0], points[-1][0]
-            points = np.array([np.array([x_min, y_min]),
-                               np.array([x_max, y_min]),
-                               np.array([x_max, y_max]),
-                               np.array([x_min, y_max])],
-                              np.float32)
-
-        width = max(np.sqrt(((points[0][0] - points[2][0]) ** 2) * 2),
-                    np.sqrt(((points[1][0] - points[3][0]) ** 2) * 2))
-        height = max(np.sqrt(((points[0][1] - points[2][1]) ** 2) * 2),
-                     np.sqrt(((points[1][1] - points[3][1]) ** 2) * 2))
-
-        dst = np.array([np.array([0, 0]),
-                        np.array([width - 1, 0]),
-                        np.array([width - 1, height - 1]),
-                        np.array([0, height - 1]),
-                        ], np.float32)
-
-        # 変換前の座標と変換後の座標を渡すことで透視変換を行う
-        trans = cv2.getPerspectiveTransform(points, dst)
-        return cv2.warpPerspective(img, trans, (int(width), int(height)))
-
-    def homography(self, img, outdir_name=''):
-        orig = img
-        # 2値画像に変換
-        gray = cv2.cvtColor(orig, cv2.COLOR_BGR2GRAY)
-        gauss = cv2.GaussianBlur(gray, (5, 5), 0)
-        canny = cv2.Canny(gauss, 50, 150)
-
-        # 2値画像中の輪郭を抽出
-        contours = cv2.findContours(canny, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)[1]
-        # 面積が大きい順にソート
-        contours.sort(key=cv2.contourArea, reverse=True)
-
-        if len(contours) > 0:
-            arclen = cv2.arcLength(contours[0], True)
-            # 輪郭を構成する点を抽出
-            approx = cv2.approxPolyDP(contours[0], 0.01 * arclen, True)
-            # warp = approx.copy()
-            if len(approx) >= 4:
-                self.last_approx = approx.copy()
-            elif self.last_approx is not None:
-                approx = self.last_approx
-        else:
-            approx = self.last_approx
-        rect = self.get_rect_by_points(approx)
-        # warped = self.transform_by4(orig, warp[:, 0, :])
-        return orig[rect[0]:rect[1], rect[2]:rect[3]]
-
-    def get_rect_by_points(self, points):
-        # prepare simple array
-        points = list(map(lambda x: x[0], points))
-
-        points = sorted(points, key=lambda x: x[1])
-        top_points = sorted(points[:2], key=lambda x: x[0])
-        bottom_points = sorted(points[2:4], key=lambda x: x[0])
-        points = top_points + bottom_points
-
-        left = min(points[0][0], points[2][0])
-        right = max(points[1][0], points[3][0])
-        top = min(points[0][1], points[1][1])
-        bottom = max(points[2][1], points[3][1])
-        return (top, bottom, left, right)
 
 
 def hybrid_cut(img=None, img_path=''):
@@ -230,6 +160,8 @@ def hybrid_cut(img=None, img_path=''):
     if img_path:
         koma_num_str = os.path.basename(img_path).split('-')[-1][0]
         if koma_num_str.isdigit() and int(koma_num_str) % 4 == 0:
+            if img_gray is None:
+                return
             img_gray = img_gray[:img_gray.shape[0] - (adc.padding_y - 4), :]
 
     # --- looming_wall
@@ -255,11 +187,17 @@ def hybrid_cut(img=None, img_path=''):
     # 縦方向はいらなさそう？ 一応残しておく
     # y = np.array(cp['y'])
     # pad_y = y[1] if len(y) > 1 and y[1] <= adc.padding_y else 0
-
-    img_out = img[top: bottom, left + pad_left: right - pad_right]
+    img_out = img[top: bottom, int(left + pad_left): int(right - pad_right)]
+    # print(top, bottom, int(left + pad_left), int(right - pad_right))
+    # print('img_out', img_out.shape)
 
     # --- looming_wall: カラーのものを切り取ってもう一度同じ処理をするとうまくいく場合もある
-    img_out_gray = cv2.cvtColor(img_out, cv2.COLOR_BGR2GRAY)
+    if len(img_out.shape) == 3:
+        img_out_gray = cv2.cvtColor(img_out, cv2.COLOR_BGR2GRAY)
+    else:
+        img_out_gray = img_out
+
+    # print('img_out_gray', img_out_gray.shape)
     left, right, top, bottom = looming_wall.search_looming_wallpoint(img_out_gray)
     img_out = img_out[top: bottom, left: right]
 

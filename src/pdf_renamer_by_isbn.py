@@ -1,8 +1,5 @@
-# coding: utf-8
 # require: zbar, ImageMagick
 # TODO: 引数で処理済みのファイルも処理対象にしたりFIND_PAGEを調整したりできるといいなあ
-from __future__ import print_function
-from __future__ import unicode_literals
 import glob
 import os
 import re
@@ -46,15 +43,18 @@ def pdf_to_isbn(pdf_path):
     remove_tmp_img(imges_path)
 
     # 対象のページを一時ファイルとしてjpgに切り出す
-    argv2_h = ['pdfimages', '-j', '-l', str(FIND_PAGE), pdf_path, img_path + '_h']
+    # argv2_h = ['pdfimages', '-j', '-l', str(FIND_PAGE), pdf_path, img_path + '_h']
     argv2_t = ['pdfimages', '-j', '-f', str(int(page) - FIND_PAGE + 1), pdf_path, img_path + '_t']
     subprocess.check_call(argv2_t)
-    subprocess.check_call(argv2_h)
-
+    # subprocess.check_call(argv2_h)
+    # print(' '.join(argv2_h), ' '.join(argv2_t))
     # jpgからバーコードを読み取り、ISBNがあれば返す
     tmp_img_list = glob.glob(imges_path)
+
     isbn = None
     for tmp_img in tmp_img_list:
+        if not tmp_img.endswith('jpg'):
+            continue
         argv3 = ['zbarimg', '-q', tmp_img]
         p3 = subprocess.Popen(argv3, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE, shell=False)
@@ -65,7 +65,6 @@ def pdf_to_isbn(pdf_path):
 
     # 一時ファイルを削除
     remove_tmp_img(imges_path)
-
     return isbn
 
 
@@ -122,12 +121,16 @@ def fetch_amazon_item(isbn):
                 raise
     return
 
+
 if __name__ == '__main__':
     pdf_dir = utils.check_argv_path(sys.argv)
     pdf_path_list = utils.get_path_list(pdf_dir, 'pdf')
+    print('pdf files:', len(pdf_path_list))
     # 処理済みのファイルを雑に判別して除外
     pdf_path_list = [p for p in pdf_path_list if not os.path.basename(p).startswith('[')]
+    pdf_path_list = [p for p in pdf_path_list if os.path.basename(p).startswith('201')]
     for pdf_path in pdf_path_list:
+        print(pdf_path)
         isbn = pdf_to_isbn(pdf_path)
         if isbn:
             try:
@@ -137,9 +140,11 @@ if __name__ == '__main__':
                 continue
             if amazon_items:
                 newname = get_newname(amazon_items)
+            else:
+                newname = str(isbn) + '.pdf'
                 # pdfファイルをリネーム
-                print(pdf_path, '->', os.path.join(pdf_dir, newname))
-                os.rename(pdf_path,
-                          os.path.join(pdf_dir, newname))
-                # API制限にかからないようにsleepを設定
-                sleep(2)
+            print(pdf_path, '->', os.path.join(pdf_dir, newname))
+            os.rename(pdf_path,
+                      os.path.join(pdf_dir, newname))
+            # API制限にかからないようにsleepを設定
+            sleep(2)
