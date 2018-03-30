@@ -1,15 +1,11 @@
-# coding: utf-8
 # require: ImageMagick
-# jpgからpngへ
-# convert -geometry 1240x1240 -density 300 -deskew 40% *.jpg -set filename:f '%t' 'image-%03d.png'
-# jpgからpdfへ
-# convert `ls -v` hoge.pdf
+# ImageMagickを使ったその他の変換
+# jpgからpngへ: convert -geometry 1240x1240 -density 300 -deskew 40% *.jpg -set filename:f '%t' 'image-%03d.png'
+# jpgからpdfへ: convert `ls -v` hoge.pdf
 # TODO: argparseとwandを使って頑張りたい
-from __future__ import print_function
-from __future__ import unicode_literals
 import os
-import sys
 import subprocess
+import sys
 
 import utils
 
@@ -33,8 +29,6 @@ def pdf_to_png(root_path):
             pdf_path = os.path.join(dirpath, filename)
             png_path = os.path.join(output_path, 'image-%03d.png')
 
-            print('convert: {} -> {}'.format(pdf_path, png_path))
-
             argv = ['convert',
                     # '-define', 'jpeg:size={0}x{0}'.format(MAX_HEIGHT),  # 大きい画像を変換するときに速くなるかも
                     '-deskew', '40%',  # 傾きを補正
@@ -42,9 +36,13 @@ def pdf_to_png(root_path):
                     '-geometry', '{0}x{0}'.format(MAX_HEIGHT),  # 最大の画像大きさを指定。縦横比は守られる
                     pdf_path, png_path]
 
+            print('exec_code: {}'.format(argv))
+            print('convert: {} -> {}'.format(pdf_path, png_path))
+
             # コマンドを実行
             if subprocess.call(argv) != 0:
                 print('failed: {}'.format(pdf_path))
+
 
 if __name__ == '__main__':
     root_path = utils.check_argv_path(sys.argv)
