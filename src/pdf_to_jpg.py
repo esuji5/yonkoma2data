@@ -11,8 +11,9 @@ from pdfminer.pdfinterp import PDFResourceManager
 from pdfminer.pdfinterp import PDFPageInterpreter
 from pdfminer.pdfpage import PDFPage
 from pdfminer.pdfparser import PDFException
-from pdfminer.layout import LAParams, LTFigure, LTImage
+from pdfminer.layout import LAParams, LTImage
 from PIL import Image
+from PIL import ImageOps
 
 import utils
 
@@ -21,27 +22,40 @@ PDF_TO_JPG_DIR = 'pdf_to_jpg'
 TMP_FILENAME_PAGE1 = 'tmp_pdf_page1.jpg'
 
 
-def find_images_in_thing(outer_layout, out_dir, page_num, max_width=None):
-    for thing in outer_layout:
-        if isinstance(thing, LTImage):
-            save_image(thing, out_dir, page_num, max_width)
+# def find_images_in_thing(outer_layout, out_dir, page_num, max_width=None):
+#     for thing in outer_layout:
+#         if isinstance(thing, LTImage):
+#             save_image(thing, out_dir, page_num, max_width)
 
 
-def save_image(lt_image, out_dir='./', filename='hoge', max_width=None):
+def save_image(lt_image, out_dir, filename, max_width=None):
     """Try to save the image data from this LTImage object, and return the file name"""
-    result = None
-    if lt_image.stream:
-        filedata = lt_image.stream.get_rawdata()
-        with open(join(out_dir, filename), 'wb') as fp:
-            result = fp.write(filedata)
-        if max_width:
-            print('max_width:', max_width)
-            img = Image.open(join(out_dir, filename))
-            w, h = img.size[:2]
-            img_resize = img.resize((max_width, h * max_width // w), Image.ANTIALIAS)
-            img_resize.save(join(out_dir, filename), 'JPEG')
-            # img_resize.save(join(out_dir, filename + '.jpg'), 'JPEG')
-        return result
+    if not lt_image.stream:
+        return
+
+    filedata = lt_image.stream.get_data()
+    out_file_name = join(out_dir, filename)
+
+    bits_per_component = lt_image.stream.attrs['BitsPerComponent']
+    if bits_per_component == 8:
+        # カラーとグレー画像はそのまま保存
+        with open(out_file_name, 'wb') as fp:
+            fp.write(filedata)
+    elif bits_per_component == 1:
+        # モノクロ画像はfiledataから作成
+        w, h = lt_image.stream.attrs['Width'], lt_image.stream.attrs['Height']
+        img = Image.frombytes('1', (w, h), filedata)
+        # グレー化、リサイズ、invertを行って保存
+        img = img.convert('L').resize((w // 2, h // 2), Image.ANTIALIAS)
+        # img = ImageOps.invert(img)
+        img.save(out_file_name, format='JPEG')
+
+    if max_width:
+        print('max_width:', max_width)
+        img = Image.open(out_file_name)
+        w, h = img.size[:2]
+        img_resize = img.resize((max_width, h * max_width // w), Image.ANTIALIAS)
+        img_resize.save(out_file_name, format='JPEG')
 
 
 def prev_pdf_parser(fp):
@@ -69,24 +83,26 @@ def pdf_to_jpg(pdf_path):
         # 既に実行結果のようなものがある場合はスキップ
         if len(os.listdir(out_dir)) > 3:
             return
-        print(out_dir)
-        print('checking pdf...')
-        parser, document = prev_pdf_parser(fp)
-        # Check if the document allows text extraction. If not, abort.
-        if not document.is_extractable:
-            raise PDFException
-        print('create pages...')
-        pages = PDFPage.create_pages(document)
 
-        # Process each page contained in the document.
-        for idx, page in enumerate(pages):
-            page_num = str(idx).zfill(4)
-            layout = prev_pdf_layout(page)
-            for thing in layout:
-                if isinstance(thing, LTImage):
-                    save_image(thing, out_dir, 'image-' + page_num + '.jpg')
-                if isinstance(thing, LTFigure):
-                    find_images_in_thing(thing, out_dir, 'image-' + page_num + '.jpg')
+        with utils.timer('extract: ' + pdf_path):
+            parser, document = prev_pdf_parser(fp)
+            # Check if the document allows text extraction. If not, abort.
+            if not document.is_extractable:
+                raise PDFException
+            pages = PDFPage.create_pages(document)
+
+            # Process each page contained in the document.
+            for idx, page in enumerate(pages):
+                page_num = str(idx).zfill(4)
+                layouts = prev_pdf_layout(page)
+                for layout in layouts:
+                    for thing in layout:
+                        if isinstance(thing, LTImage):
+                            save_image(thing, out_dir, 'image-' + page_num + '.jpg')
+                # if isinstance(thing, LTImage):
+                #     save_image(thing, out_dir, 'image-' + page_num + '.jpg')
+                # if isinstance(thing, LTFigure):
+                #     find_images_in_thing(thing, out_dir, 'image-' + page_num + '.jpg')
 
 
 def pdf_to_page1(pdf_path):
@@ -96,24 +112,30 @@ def pdf_to_page1(pdf_path):
         # Check if the document allows text extraction. If not, abort.
         if not document.is_extractable:
             raise PDFException
-        page1 = PDFPage.create_pages(document).__next__()  # next関数が実装されてない？
+        # 最初のページを取得
+        page1 = PDFPage.create_pages(document).__next__()
 
-        layout = prev_pdf_layout(page1)
-        for thing in layout:
-            if isinstance(thing, LTImage):
+        layouts = prev_pdf_layout(page1)
+        for layout in layouts:
+            for thing in layout:
                 save_image(
                     thing, dirname(pdf_path), TMP_FILENAME_PAGE1, max_width=MAX_WIDTH_JPG1)
-            if isinstance(thing, LTFigure):
-                find_images_in_thing(
-                    thing, dirname(pdf_path), TMP_FILENAME_PAGE1, max_width=MAX_WIDTH_JPG1)
+
+            # if isinstance(thing, LTImage):
+            #     save_image(
+            #         thing, dirname(pdf_path), TMP_FILENAME_PAGE1, max_width=MAX_WIDTH_JPG1)
+            # if isinstance(thing, LTFigure):
+            #     find_images_in_thing(
+            #         thing, dirname(pdf_path), TMP_FILENAME_PAGE1, max_width=MAX_WIDTH_JPG1)
     return join(dirname(pdf_path), TMP_FILENAME_PAGE1)
 
 
 if __name__ == '__main__':
     pdf_dir = utils.check_argv_path(sys.argv)
     pdf_path_list = utils.get_path_list(pdf_dir, 'pdf')
+    pdf_path_list = [path for path in pdf_path_list if not os.path.isdir(path)]
     pdf_to_jpg_dir = utils.make_outdir(pdf_dir, PDF_TO_JPG_DIR)
+
     print('pdf files:', len(pdf_path_list))
-    # 処理済みのファイルを雑に判別して除外
     for pdf_path in pdf_path_list:
         pdf_to_jpg(pdf_path)
