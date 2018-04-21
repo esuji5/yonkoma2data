@@ -79,16 +79,16 @@ $ pip install -r requirement.txt
 |--ext |jpg| target ext)|
 
 #### args run exmaple
-扉絵付き、最初と最後の5ページ分はスキップ
-`python3 amane_cut.py ~/image/hoge -t -s 5 -e 5`
-枠線付きサブタイトルがある作品。サブタイトルがいらない場合
-`python3 amane_cut.py ~/image/hoge -ss`
-枠線付きサブタイトルがある作品。サブタイトルも保存する場合
-`python3 amane_cut.py ~/image/hoge -ws`
-1ページに1本だけ4コマがあるワイドな4コマ作品の場合
-`python3 amane_cut.py ~/image/hoge -p wide`
-余白幅をyが50px、xが80pxにする場合
-`python3 amane_cut.py ~/image/hoge -s 10 -y 50 -x 80`
+- 扉絵付き、最初と最後の5ページ分はスキップ
+  - `python3 amane_cut.py ~/image/hoge -t -s 5 -e 5`
+- 枠線付きサブタイトルがある作品。サブタイトルがいらない場合
+  - `python3 amane_cut.py ~/image/hoge -ss`
+- 枠線付きサブタイトルがある作品。サブタイトルも保存する場合
+  - `python3 amane_cut.py ~/image/hoge -ws`
+- 1ページに1本だけ4コマがあるワイドな4コマ作品の場合
+  - `python3 amane_cut.py ~/image/hoge -p wide`
+- 余白幅をyが50px、xが80pxにする場合
+  - `python3 amane_cut.py ~/image/hoge -s 10 -y 50 -x 80`
 
 ## コマ中のセリフを抽出する
 ### require
