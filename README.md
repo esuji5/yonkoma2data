@@ -44,7 +44,17 @@ $ pip install -r requirement.txt
 - ↑を日本語パスが含まれない場所に移動・リネーム(OpenCVが日本語含みのパスを読み込めないため)
 
 ### run
-`$ python src/pdf_to_pageimage.py path/to/pdffiles_dir`
+`$ python src/pdf_to_png.py path/to/pdffiles_dir`
+
+## PDFファイルをページ毎のJPGファイルに切り出す（高速）
+- ImageMagickを使ったpdf展開が遅かったのでPDFMinerを使用して高速化を図りました。
+- 2値画像展開時に値が反転されて出てくる場合はsrc/pdf_to_jpg.pyの50行目：`# img = ImageOps.invert(img)`のコメントアウトを外してください。
+### require
+- `pip install pdfminer`
+- 切り出したpdfファイル群を入れたディレクトリ
+
+### run
+`$ python src/pdf_to_jpg.py path/to/pdffiles_dir`
 
 
 ## ページ毎のPNGファイルを1コマ毎のPNGファイルに切り出す
@@ -67,7 +77,7 @@ $ pip install -r requirement.txt
 | args name | default | more |
 | --------- | -------| ------- |
 |filepath| | file path|
-|-p, --pagetype|normal| choices=[normal, wide, left_start],set page type: [normal(, wide, left_start]|
+|-p, --pagetype|normal| choices=[normal, wide, left_start],set page type: [normal(, wide, left_start)]|
 |-ws, --with_subtitle| |have subtitle and cut them|
 |-ss, --shave_subtitle| |have subtitle and do not have to cut them|
 |-ok, --only_koma| |cut only komas|
@@ -76,7 +86,7 @@ $ pip install -r requirement.txt
 |-t, --tobirae| |cut tobirae|
 |-x, --pad_x| 50 |set padding size(px) for x|
 |-y, --pad_y| 27 |set padding size(px) for y|
-|--ext |jpg| target ext)|
+|--ext |jpg| target ext|
 
 #### args run exmaple
 - 扉絵付き、最初と最後の5ページ分はスキップ
