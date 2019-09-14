@@ -8,7 +8,7 @@ import shutil
 import cv2
 import numpy as np
 
-import cut_by_paint_out as cut_po
+import pdf_to_file.cut_by_paint_out as cut_po
 import utils
 
 
