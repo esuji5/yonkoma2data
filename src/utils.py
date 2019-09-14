@@ -6,6 +6,7 @@ import os
 from os.path import basename
 from os.path import join
 import pickle
+import shutil
 import subprocess
 import time
 
@@ -56,6 +57,16 @@ def img_to_gray(img):
     return gray
 
 
+def img_to_canny(img, gf_size=5, min_t=50, max_t=150):
+    if len(img.shape) == 3:
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    else:
+        gray = img
+    gauss = cv2.GaussianBlur(gray, (gf_size, gf_size), 0)
+    canny = cv2.Canny(gauss, min_t, max_t)
+    return canny
+
+
 def make_outdir_of_imgfile(img_path, outdir_name='out', add_name='_out'):
     img_dirname = os.path.dirname(img_path)
     outdir = join(img_dirname, outdir_name)
@@ -68,7 +79,10 @@ def make_outdir_of_imgfile(img_path, outdir_name='out', add_name='_out'):
 def pickle_dump(value, filename='out.pickle'):
     '''pickleファイルを保存'''
     with open(filename, 'wb') as f:
-        pickle.dump(value, f)
+        try:
+            pickle.dump(value, f)
+        except pickle.PickleError:
+            pickle.dump([value], f)
 
 
 def pickle_load(filename='out.pickle'):
@@ -166,6 +180,13 @@ def clean_image(image_dir_path, target, is_gray=True):
             '-density', str(150),  # 解像度
             join(image_dir_path, target)]  # g.jpgだけを対象
     run_process(argv)
+
+
+def clean_dir(dir_path, dir_name):
+    output_path = make_outdir(dir_path, dir_name)
+    if len(os.listdir(output_path)) >= 3:
+        shutil.rmtree(output_path)
+        output_path = make_outdir(dir_path, dir_name)
 
 
 @contextmanager

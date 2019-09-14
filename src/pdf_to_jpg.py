@@ -22,12 +22,6 @@ PDF_TO_JPG_DIR = 'pdf_to_jpg'
 TMP_FILENAME_PAGE1 = 'tmp_pdf_page1.jpg'
 
 
-# def find_images_in_thing(outer_layout, out_dir, page_num, max_width=None):
-#     for thing in outer_layout:
-#         if isinstance(thing, LTImage):
-#             save_image(thing, out_dir, page_num, max_width)
-
-
 def save_image(lt_image, out_dir, filename, max_width=None):
     """Try to save the image data from this LTImage object, and return the file name"""
     if not lt_image.stream:
@@ -47,15 +41,15 @@ def save_image(lt_image, out_dir, filename, max_width=None):
         img = Image.frombytes('1', (w, h), filedata)
         # グレー化、リサイズ、invertを行って保存
         img = img.convert('L').resize((w // 2, h // 2), Image.ANTIALIAS)
-        # img = ImageOps.invert(img)
-        img.save(out_file_name, format='JPEG')
+        img = ImageOps.invert(img)
+        img.save(out_file_name)
 
     if max_width:
         print('max_width:', max_width)
         img = Image.open(out_file_name)
         w, h = img.size[:2]
         img_resize = img.resize((max_width, h * max_width // w), Image.ANTIALIAS)
-        img_resize.save(out_file_name, format='JPEG')
+        img_resize.save(out_file_name)
 
 
 def prev_pdf_parser(fp):
@@ -81,7 +75,8 @@ def pdf_to_jpg(pdf_path):
         # 画像を格納するディレクトリを作成
         out_dir = utils.make_outdir(pdf_to_jpg_dir, basename(pdf_path))
         # 既に実行結果のようなものがある場合はスキップ
-        if len(os.listdir(out_dir)) > 3:
+        if len(os.listdir(out_dir)) > 10:
+            print('dir exists: skip')
             return
 
         with utils.timer('extract: ' + pdf_path):
@@ -98,11 +93,8 @@ def pdf_to_jpg(pdf_path):
                 for layout in layouts:
                     for thing in layout:
                         if isinstance(thing, LTImage):
+                            # save_image(thing, out_dir, 'image-' + page_num + '.png')
                             save_image(thing, out_dir, 'image-' + page_num + '.jpg')
-                # if isinstance(thing, LTImage):
-                #     save_image(thing, out_dir, 'image-' + page_num + '.jpg')
-                # if isinstance(thing, LTFigure):
-                #     find_images_in_thing(thing, out_dir, 'image-' + page_num + '.jpg')
 
 
 def pdf_to_page1(pdf_path):
@@ -121,12 +113,6 @@ def pdf_to_page1(pdf_path):
                 save_image(
                     thing, dirname(pdf_path), TMP_FILENAME_PAGE1, max_width=MAX_WIDTH_JPG1)
 
-            # if isinstance(thing, LTImage):
-            #     save_image(
-            #         thing, dirname(pdf_path), TMP_FILENAME_PAGE1, max_width=MAX_WIDTH_JPG1)
-            # if isinstance(thing, LTFigure):
-            #     find_images_in_thing(
-            #         thing, dirname(pdf_path), TMP_FILENAME_PAGE1, max_width=MAX_WIDTH_JPG1)
     return join(dirname(pdf_path), TMP_FILENAME_PAGE1)
 
 
