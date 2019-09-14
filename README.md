@@ -17,8 +17,8 @@ Python3系とOpenCVを基本として用途に応じて、ImageMagick、zbar等�
 - セリフ抜き出しは上下吹き出し対応ができたらコミット予定
 
 ## prepare
-- install Python3 (3.5推奨) http://www.python.jp/
-- install OpenCV (3.0以上推奨) http://opencv.jp/
+- install Python3 (3.6以上) http://www.python.jp/
+- install OpenCV (3.0以上) http://opencv.jp/
 
 ```
 $ git clone https://github.com/esuji5/yonkoma2data
@@ -27,15 +27,16 @@ $ pip install -r requirement.txt
 ```
 
 ## PDFファイルのバーコード（JANコード）を読み取り自動リネーム
+**TODO: AWSのライブラリ最新版にしたい**
 ### require
 - install zbar(http://zbar.sourceforge.net/)
 - install ImageMagick(http://www.imagemagick.org/script/index.php)
 - prepare Amazon Product Advertising API(https://affiliate.amazon.co.jp/gp/advertising/api/detail/main.html)
-- src/key_amazon.pyに↑のID、Keyを入力
+- key_amazon.pyに↑のID、Keyを入力
 - リネームしたいpdfファイル群を入れたディレクトリ
 
 ### run
-`$ python src/pdf_renamer.py path/to/pdffiles_dir`
+`$ python pdf_renamer.py path/to/pdffiles_dir`
 
 ## PDFファイルをページ毎のPNGファイルに切り出す
 ### require
@@ -44,25 +45,16 @@ $ pip install -r requirement.txt
 - ↑を日本語パスが含まれない場所に移動・リネーム(OpenCVが日本語含みのパスを読み込めないため)
 
 ### run
-`$ python src/pdf_to_png.py path/to/pdffiles_dir`
+`$ python pdf_to_jpg.py path/to/pdffiles_dir`
 
-## PDFファイルをページ毎のJPGファイルに切り出す（高速）
-- ImageMagickを使ったpdf展開が遅かったのでPDFMinerを使用して高速化を図りました。
-- 2値画像展開時に値が反転されて出てくる場合はsrc/pdf_to_jpg.pyの50行目：`# img = ImageOps.invert(img)`のコメントアウトを外してください。
-### require
-- `pip install pdfminer`
-- 切り出したpdfファイル群を入れたディレクトリ
+## 傾き補正、美白化を行う
+`$ cd path/to/jpgs`
 
-### run
-`$ python src/pdf_to_jpg.py path/to/pdffiles_dir`
-
-
-## ページ毎のPNGファイルを1コマ毎のPNGファイルに切り出す
-### require
-- ページ毎の画像を入れたディレクトリ
-
-### run
-`$ python src/page_to_koma.py path/to/image_dir`
+`$ mogrify -level 25%,83% -deskew 40% -density 200 *.jpg`
+- 以下の値は適宜調整する
+    - 傾き補正度 `-deskew`: 35~45%程度
+    - 美白度 `-level`: {下限}, {上限}
+    - 解像度 `-density`: 100~350程度  
 
 ## ページ毎のJPGファイルを1コマ毎のJPGファイルに切り出す。多くの作品に対応版
 ### require
@@ -71,7 +63,7 @@ $ pip install -r requirement.txt
 - OpenCV 3.4
 
 ### run
-`$ python src/amane_cut.py path/to/image_dir`
+`$ python amane_cut.py path/to/image_dir`
 
 ### args
 | args name | default | more |
@@ -103,5 +95,13 @@ $ pip install -r requirement.txt
 ## コマ中のセリフを抽出する
 ### require
 - prepare Google Cloud Platformのアカウント
+- Cloud Vision APIを有効化し、API keyをjsonで保存する
 
-WIP
+### 画像をOCRをにかける
+`$ python3 jpg_to_ocr.py path/to/image_dir_path/`
+OCR結果は `path/to/pickle/image_dir_path(_master).pickle` に保存されます。
+- `image_dir_path.pickle`: OCR結果を適宜保存するpickle
+- `image_dir_path_master.pickle`: 最後までエラーが出ずに動いたら保存されるpickle
+
+### OCR結果を綺麗にしてcsv出力
+`$ python3 pickle_to_serif_data.py ~/image/rename_test/pdf_to_jpg/ato.pdf/2_paint_out/0_koma/pickles/0_padding_shave_master.pickle`
