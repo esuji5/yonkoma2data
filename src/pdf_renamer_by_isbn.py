@@ -11,8 +11,8 @@ from urllib.error import HTTPError
 import bottlenose
 from bs4 import BeautifulSoup
 
+from arrange_pdf import key_amazon as ka
 import utils
-import key_amazon as ka
 
 re_page = re.compile('Pages:\s*[0-9]{1,}')
 re_isbn = re.compile('(978[0-9]{10}|491[0-9]{10})')
@@ -23,6 +23,7 @@ FIND_PAGE = 3  # 後ろからどれだけのページを探索するか
 
 
 def pdf_to_isbn(pdf_path):
+    print('pdf_path:', pdf_path)
     def remove_tmp_img(imges_path):
         # 一時ファイルを削除
         tmp_img_list = glob.glob(imges_path)
