@@ -1,9 +1,9 @@
-'''あまねく4コマを切り取るすごいやつだよ'''
+"""あまねく4コマを切り取るすごいやつだよ"""
+
 import argparse
 import os
-from os.path import basename
-from os.path import join
 import shutil
+from os.path import basename, join
 
 import cv2
 import numpy as np
@@ -22,20 +22,22 @@ def cut_koma(con, img, padding=False):
     cut_y_h = y + h + py if y + h + py < img.shape[0] else img.shape[0] - 1
     cut_x = x - px if x - px >= 0 else 0
     cut_x_w = x + w + py if x + w + py < img.shape[1] else img.shape[1] - 1
-    koma = img[cut_y: cut_y_h, cut_x: cut_x_w]
+    koma = img[cut_y:cut_y_h, cut_x:cut_x_w]
 
     return koma
 
 
-def imwrite(cut_path, koma_id, img, sufix=''):
-    cv2.imwrite('{}-{}{}.jpg'.format(cut_path, koma_id, sufix), img)
+def imwrite(cut_path, koma_id, img, sufix=""):
+    if img.any():
+        cv2.imwrite("{}-{}{}.jpg".format(cut_path, koma_id, sufix), img)
 
 
 def find_average_point(cp_list):
-    '''カットポイントの平均を算出
+    """カットポイントの平均を算出
     args cp_list: [(left_cons, right_cons)]
     cons: (x, y, w, h, size)
-    '''
+    """
+
     def calc_mean(cons):
         if cons.any():
             orig_sh = cons.shape
@@ -46,7 +48,7 @@ def find_average_point(cp_list):
 
     all_left_cons = np.array([cp[0] for cp in cp_list])
     mean_left_cons = calc_mean(all_left_cons)
-    if args.pagetype == 'wide':
+    if args.pagetype == "wide":
         mean_right_cons = np.array([])
     else:
         all_right_cons = np.array([cp[1] for cp in cp_list])
@@ -62,7 +64,7 @@ def make_labeled_contours(img, kind):
 
     canny2 = None
     if img_p1 is None:
-        if kind == '2nd':
+        if kind == "2nd":
             canny2 = canny1
         else:
             return
@@ -74,12 +76,12 @@ def make_labeled_contours(img, kind):
 
 
 def exec_paint_out_cut(img_path_list, kind):
-    '''nyaa式改修版'''
-    if kind == '1st':
+    """nyaa式改修版"""
+    if kind == "1st":
         if args.end:
-            target_path_list = enumerate(img_path_list[args.start: -1 * args.end])
+            target_path_list = enumerate(img_path_list[args.start : -1 * args.end])
         else:
-            target_path_list = enumerate(img_path_list[args.start:])
+            target_path_list = enumerate(img_path_list[args.start :])
     else:
         target_path_list = enumerate(img_path_list)
     for idx, img_path in target_path_list:
@@ -89,16 +91,16 @@ def exec_paint_out_cut(img_path_list, kind):
         contours = make_labeled_contours(img, kind)
         if contours is None:
             continue
-        if len(contours) < 2 and kind == '1st':
-            print('contours　less than 2:', img_path)
+        if len(contours) < 2 and kind == "1st":
+            print("contours　less than 2:", img_path)
             continue
 
-        if kind == '1st':
+        if kind == "1st":
             is_good_cons, is_nice_size = False, False
             left_cons, right_cons, tobira = cut_po.parse_contours(contours)
             len_right, len_left = len(right_cons), len(left_cons)
             # print(len(left_cons), len(right_cons), tobira.any())
-            if args.pagetype == 'wide':
+            if args.pagetype == "wide":
                 is_good_cons = len_left == good_cons_num_y and not len_right
             elif args.tobirae and tobira.any():
                 is_good_cons = len_left + len_right == good_cons_num_y
@@ -115,8 +117,12 @@ def exec_paint_out_cut(img_path_list, kind):
                     left_size_std = np.array(left_cons + right_cons).std(axis=0)[4]
                     right_size_std = 0
                 else:
-                    left_size_std = np.array(left_cons).std(axis=0)[4] if left_cons else 0
-                    right_size_std = np.array(right_cons).std(axis=0)[4] if right_cons else 0
+                    left_size_std = (
+                        np.array(left_cons).std(axis=0)[4] if left_cons else 0
+                    )
+                    right_size_std = (
+                        np.array(right_cons).std(axis=0)[4] if right_cons else 0
+                    )
                 is_nice_size = left_size_std < 100 and right_size_std < 100
 
             cut_path = join(output_shaved_path, basename(img_path)[:-4])
@@ -124,17 +130,21 @@ def exec_paint_out_cut(img_path_list, kind):
             if is_good_cons and is_nice_size:
                 # 切り抜き
                 if tobira.any():
-                    print('tobira', img_path)
+                    print("tobira", img_path)
                     imwrite(cut_path, 0, cut_koma(tobira, img_o, False))
-                if args.pagetype == 'left_start':
+                if args.pagetype == "left_start":
                     right_cons, left_cons = left_cons, right_cons
                 if args.shave_subtitle:
                     right_cons, left_cons = right_cons[1:], left_cons[1:]
 
-                [imwrite(cut_path, i + 1, cut_koma(con, img_o, False))
-                    for i, con in enumerate(right_cons)]
-                [imwrite(cut_path, i + 1 + len_right, cut_koma(con, img_o, False))
-                    for i, con in enumerate(left_cons)]
+                [
+                    imwrite(cut_path, i + 1, cut_koma(con, img_o, False))
+                    for i, con in enumerate(right_cons)
+                ]
+                [
+                    imwrite(cut_path, i + 1 + len_right, cut_koma(con, img_o, False))
+                    for i, con in enumerate(left_cons)
+                ]
 
                 # 扉絵切り抜きがなければ切り抜き位置を保存
                 if not tobira.any():
@@ -146,10 +156,10 @@ def exec_paint_out_cut(img_path_list, kind):
                 # 見つからなかったものはリストに入れておいて、後で平均切り出し座標でカット
                 not_cut_img_path_dict[idx] = img_path
 
-        elif kind == '2nd':
+        elif kind == "2nd":
             cut_path = join(output_shaved_path, basename(img_path)[:-4])
             shaved_img = exec_po_2nd(img_o, contours)
-            cv2.imwrite('{}-{}.jpg'.format(cut_path, 'shaved'), shaved_img)
+            cv2.imwrite("{}-{}.jpg".format(cut_path, "shaved"), shaved_img)
 
 
 def exec_po_2nd(img_o, contours):
@@ -163,7 +173,7 @@ def exec_po_2nd(img_o, contours):
     if w < (orig_w - padding_x * 2) * 0.9 or h < (orig_h - padding_y * 2) * 0.9:
         shaved_img = img_o
     else:
-        shaved_img = img_o[y: y + h, x: x + w]
+        shaved_img = img_o[y : y + h, x : x + w]
     return shaved_img
 
 
@@ -175,8 +185,12 @@ def detect_only_koma(left_cons, right_cons, even_page_cp, odd_page_cp, img_o):
     # shaveした後とする前で面積を比較
     right_imgs = [cut_koma(con, img_o, True) for i, con in enumerate(right_cons)]
     left_imgs = [cut_koma(con, img_o, True) for i, con in enumerate(left_cons)]
-    right_s_imgs = [exec_po_2nd(im, make_labeled_contours(im, '2nd')) for im in right_imgs]
-    left_s_imgs = [exec_po_2nd(im, make_labeled_contours(im, '2nd')) for im in left_imgs]
+    right_s_imgs = [
+        exec_po_2nd(im, make_labeled_contours(im, "2nd")) for im in right_imgs
+    ]
+    left_s_imgs = [
+        exec_po_2nd(im, make_labeled_contours(im, "2nd")) for im in left_imgs
+    ]
     right_s_area = np.array([im.shape[0] * im.shape[1] for im in right_s_imgs])
     left_s_area = np.array([im.shape[0] * im.shape[1] for im in left_s_imgs])
 
@@ -197,27 +211,40 @@ def detect_only_koma(left_cons, right_cons, even_page_cp, odd_page_cp, img_o):
 
 # メインの処理
 parser = argparse.ArgumentParser()
-parser.add_argument('filepath')
-parser.add_argument('-p', '--pagetype',
-                    default='normal', choices=['normal', 'wide', 'left_start'],
-                    help=('set page type: [normal(default), wide, left_start]'))
-parser.add_argument('-ws', '--with_subtitle', action="store_true",
-                    help=('have subtitle and cut them'))
-parser.add_argument('-ss', '--shave_subtitle', action="store_true",
-                    help=('have subtitle and do not have to cut them'))
-parser.add_argument('-ok', '--only_koma', action="store_true",
-                    help=('cut only komas'))
-parser.add_argument('-s', '--start', type=int, default="0",
-                    help=('start page num'))
-parser.add_argument('-e', '--end', type=int, default="0",
-                    help=('end page num from last. slice like this [: -1 * end]'))
-parser.add_argument('-t', '--tobirae', action="store_true",
-                    help=('cut tobirae'))
-parser.add_argument('-x', '--pad_x', default=50, type=int,
-                    help=('set padding size(px) for x'))
-parser.add_argument('-y', '--pad_y', default=27, type=int,
-                    help=('set padding size(px) for y'))
-parser.add_argument('--ext', default='jpg', help=('target ext'))
+parser.add_argument("filepath")
+parser.add_argument(
+    "-p",
+    "--pagetype",
+    default="normal",
+    choices=["normal", "wide", "left_start"],
+    help=("set page type: [normal(default), wide, left_start]"),
+)
+parser.add_argument(
+    "-ws", "--with_subtitle", action="store_true", help=("have subtitle and cut them")
+)
+parser.add_argument(
+    "-ss",
+    "--shave_subtitle",
+    action="store_true",
+    help=("have subtitle and do not have to cut them"),
+)
+parser.add_argument("-ok", "--only_koma", action="store_true", help=("cut only komas"))
+parser.add_argument("-s", "--start", type=int, default="0", help=("start page num"))
+parser.add_argument(
+    "-e",
+    "--end",
+    type=int,
+    default="0",
+    help=("end page num from last. slice like this [: -1 * end]"),
+)
+parser.add_argument("-t", "--tobirae", action="store_true", help=("cut tobirae"))
+parser.add_argument(
+    "-x", "--pad_x", default=50, type=int, help=("set padding size(px) for x")
+)
+parser.add_argument(
+    "-y", "--pad_y", default=27, type=int, help=("set padding size(px) for y")
+)
+parser.add_argument("--ext", default="jpg", help=("target ext"))
 args = parser.parse_args()
 print(args)
 
@@ -229,35 +256,40 @@ if args.with_subtitle or args.shave_subtitle:
     good_cons_num_y += 1
 
 # 出力ディレクトリ・パスを準備
-outdir_name = '2_paint_out'
+outdir_name = "2_paint_out"
 output_path = utils.make_outdir(image_dir, outdir_name)
 
-output_koma_path = utils.make_outdir(output_path, '0_koma')
+output_koma_path = utils.make_outdir(output_path, "0_koma")
 if len(os.listdir(output_koma_path)) >= 3:
     shutil.rmtree(output_path)
     output_path = utils.make_outdir(image_dir, outdir_name)
-    output_koma_path = utils.make_outdir(output_path, '0_koma')
-output_shaved_path = utils.make_outdir(output_koma_path, '0_padding_shave')
+    output_koma_path = utils.make_outdir(output_path, "0_koma")
+output_shaved_path = utils.make_outdir(output_koma_path, "0_padding_shave")
 
 
 # paint_out処理: 1st
 img_path_list = utils.get_path_list(image_dir, args.ext)
-print('pages:', len(img_path_list) - (args.start + args.end))
-with utils.timer('paint_out処理: 1st 切り抜き位置が求められた画像を切り抜き'):
+print("pages:", len(img_path_list) - (args.start + args.end))
+with utils.timer("paint_out処理: 1st 切り抜き位置が求められた画像を切り抜き"):
     odd_cp_list = []  # 奇数idxページのカットポイントを格納
     even_cp_list = []  # 偶数idxページのカットポイントを格納
     not_cut_img_path_dict = {}
-    exec_paint_out_cut(img_path_list, kind='1st')
+    exec_paint_out_cut(img_path_list, kind="1st")
 
     # 平均切り出し座標を算出
     even_page_cp = find_average_point(even_cp_list)
     odd_page_cp = find_average_point(odd_cp_list)
 
-print('lens', len(img_path_list) - len(not_cut_img_path_dict))
-
+print("lens", len(img_path_list) - len(not_cut_img_path_dict))
+print(
+    "even",
+    even_page_cp,
+    "odd",
+    odd_page_cp,
+)
 # 平均切り出し座標から画像を切り出すループ
 if not_cut_img_path_dict:
-    with utils.timer('平均切り出し座標から画像を切り出しています'):
+    with utils.timer("平均切り出し座標から画像を切り出しています"):
         for idx, img_path in not_cut_img_path_dict.items():
             img = cv2.imread(img_path)
             if img is None:
@@ -272,16 +304,26 @@ if not_cut_img_path_dict:
             if args.only_koma:
                 print(img_path)
                 left_cons, right_cons = detect_only_koma(
-                    left_cons, right_cons, even_page_cp, odd_page_cp, gray)
-            [imwrite(cut_path, i + 1, cut_koma(con, img_o, True), '-pad')
-                for i, con in enumerate(right_cons)]
-            [imwrite(cut_path, i + 1 + len(right_cons), cut_koma(con, img_o, True), '-pad')
-                for i, con in enumerate(left_cons)]
+                    left_cons, right_cons, even_page_cp, odd_page_cp, gray
+                )
+            [
+                imwrite(cut_path, i + 1, cut_koma(con, img_o, True), "-pad")
+                for i, con in enumerate(right_cons)
+            ]
+            [
+                imwrite(
+                    cut_path,
+                    i + 1 + len(right_cons),
+                    cut_koma(con, img_o, True),
+                    "-pad",
+                )
+                for i, con in enumerate(left_cons)
+            ]
 else:
-    print('平均切り出し座標はありません')
+    print("平均切り出し座標はありません")
 
 # paint_out処理: 2nd padding削ぎ落とし
-img_path_list = utils.get_path_list(output_koma_path, '-pad.jpg')
-print('komas:', len(img_path_list))
-with utils.timer('paint_out処理: 2nd padding削ぎ落とし'):
-    exec_paint_out_cut(img_path_list, kind='2nd')
+img_path_list = utils.get_path_list(output_koma_path, "-pad.jpg")
+print("komas:", len(img_path_list))
+with utils.timer("paint_out処理: 2nd padding削ぎ落とし"):
+    exec_paint_out_cut(img_path_list, kind="2nd")

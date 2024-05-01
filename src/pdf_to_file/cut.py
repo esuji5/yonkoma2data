@@ -17,11 +17,11 @@ class AverageDiffCut:
     # 横方向に使う言葉: x, width, column
     # 縦方向に使う言葉: y, height, row
     def search_cut_point(self, img):
-        '''入力された画像のカットポイントを検出して返す '''
+        """入力された画像のカットポイントを検出して返す"""
 
         def get_big_diff(avg_list):
             # TODO: numpy使って書けそう
-            '''しきい値以上のdiffがあるポイントを返す'''
+            """しきい値以上のdiffがあるポイントを返す"""
             big_diff_list = []
             for idx in range(1, len(avg_list)):
                 if math.fabs(avg_list[idx - 1]) >= self.diff_threshold:
@@ -29,7 +29,7 @@ class AverageDiffCut:
             return big_diff_list
 
         def find_cut_point(big_diff_list):
-            '''しきい値を超えたリストからカットポイントを検出してリストで返す'''
+            """しきい値を超えたリストからカットポイントを検出してリストで返す"""
             cp_list = []
             recent_point = 0
             for cp in big_diff_list:
@@ -67,38 +67,46 @@ class AverageDiffCut:
         cp_x = find_cut_point(row_big_diff)
         cp_y = find_cut_point(col_big_diff)
 
-        return {'x': cp_x, 'y': cp_y}
+        return {"x": cp_x, "y": cp_y}
 
-    def cutout(self, img, cut_point, img_path='trim', padding=False, extra_cut=False):
-        '''渡した画像とカットポイントでimage_pathに切り出す'''
+    def cutout(self, img, cut_point, img_path="trim", padding=False, extra_cut=False):
+        """渡した画像とカットポイントでimage_pathに切り出す"""
         px = self.padding_x if padding else 0
         py = self.padding_y if padding else 0
-        cp_x = cut_point['x']
-        cp_y = cut_point['y']
+        cp_x = cut_point["x"]
+        cp_y = cut_point["y"]
         for i in range(0, len(cp_y)):
             if i % 2 == 0:
-                img_cut_1_4 = img[cp_y[i] - py:cp_y[i + 1] + py, cp_x[2] - px:cp_x[3] + px]
-                img_cut_5_8 = img[cp_y[i] - py:cp_y[i + 1] + py, cp_x[0] - px:cp_x[1] + px]
+                img_cut_1_4 = img[
+                    cp_y[i] - py : cp_y[i + 1] + py, cp_x[2] - px : cp_x[3] + px
+                ]
+                img_cut_5_8 = img[
+                    cp_y[i] - py : cp_y[i + 1] + py, cp_x[0] - px : cp_x[1] + px
+                ]
                 if extra_cut:
                     # ページ画像から1コマ画像へ一気に切り抜く場合などに使う
-                    img_cut_1_4 = hybrid_cut(img=img_cut_1_4, img_path='dum-{}'.format(i // 2 + 1))
-                    img_cut_5_8 = hybrid_cut(img=img_cut_5_8, img_path='dum-{}'.format(i // 2 + 5))
-                cv2.imwrite('{}-{}.jpg'.format(img_path, str(i // 2 + 1)), img_cut_1_4)
-                cv2.imwrite('{}-{}.jpg'.format(img_path, str(i // 2 + 5)), img_cut_5_8)
+                    img_cut_1_4 = hybrid_cut(
+                        img=img_cut_1_4, img_path="dum-{}".format(i // 2 + 1)
+                    )
+                    img_cut_5_8 = hybrid_cut(
+                        img=img_cut_5_8, img_path="dum-{}".format(i // 2 + 5)
+                    )
+                cv2.imwrite("{}-{}.jpg".format(img_path, str(i // 2 + 1)), img_cut_1_4)
+                cv2.imwrite("{}-{}.jpg".format(img_path, str(i // 2 + 5)), img_cut_5_8)
 
     def find_average_point(self, cp_list):
-        '''カットポイントの平均を算出'''
+        """カットポイントの平均を算出"""
         # TODO: numpy使って書く
         average_list_x = [0 for i in range(self.cp_num_x)]
         average_list_y = [0 for i in range(self.cp_num_y)]
         for cut_point in cp_list:
-            for index, cp_value in enumerate(cut_point['x']):
+            for index, cp_value in enumerate(cut_point["x"]):
                 average_list_x[index] += cp_value
-            for index, cp_value in enumerate(cut_point['y']):
+            for index, cp_value in enumerate(cut_point["y"]):
                 average_list_y[index] += cp_value
         average_cp_x = [i // len(cp_list) for i in average_list_x]
         average_cp_y = [i // len(cp_list) for i in average_list_y]
-        return {'x': average_cp_x, 'y': average_cp_y}
+        return {"x": average_cp_x, "y": average_cp_y}
 
 
 # 迫り来る壁法
@@ -115,7 +123,7 @@ class LoomingWall:
 
     def search_looming_wallpoint(self, img):
         if img is None:
-            return (0,0,0,0)
+            return (0, 0, 0, 0)
 
         # 縦・横方向それぞれの閾値より白い画素値を数える TODO:本当は0 or 1 でよい
         row_white_list = np.sum(img < self.white_threthould, axis=0)
@@ -125,29 +133,29 @@ class LoomingWall:
         # それぞれの方向から白いとこしかない列/行から黒い部分がある列/行に変わる位置を保持して返す
         # TODO: もうちょっとエレガントに書けない？
         # 左から走査
-        for i in range(len(row_white_list[:AverageDiffCut.padding_x + 10])):
+        for i in range(len(row_white_list[: AverageDiffCut.padding_x + 10])):
             if row_white_list[i] == 0 and row_white_list[i + 1] > 0:
                 left = i
                 break
         # 右から走査
-        for i in range(len(row_white_list[:AverageDiffCut.padding_x + 10])):
+        for i in range(len(row_white_list[: AverageDiffCut.padding_x + 10])):
             if row_white_list[-(i + 1)] == 0 and row_white_list[-(i + 2)] > 0:
                 right = len(row_white_list) - i - 1
                 break
         # 上から走査
-        for i in range(len(col_white_list[:AverageDiffCut.padding_y + 10])):
+        for i in range(len(col_white_list[: AverageDiffCut.padding_y + 10])):
             if col_white_list[i] == 0 and col_white_list[i + 1] > 0:
                 top = i
                 break
         # 下から走査
-        for i in range(len(col_white_list[:AverageDiffCut.padding_y + 10])-1):
+        for i in range(len(col_white_list[: AverageDiffCut.padding_y + 10]) - 1):
             if col_white_list[-(i + 1)] == 0 and col_white_list[-(i + 2)] > 0:
                 bottom = len(col_white_list) - i - 1
                 break
         return (left, right, top, bottom)
 
 
-def hybrid_cut(img=None, img_path=''):
+def hybrid_cut(img=None, img_path=""):
     # === 現状、looming_wall -> average_diff_cut -> looming_wall の3段処理
     # --- 前処理
     if img is None:
@@ -158,15 +166,15 @@ def hybrid_cut(img=None, img_path=''):
 
     # ページ番号があると上手くいかないのでそこにかかる程度に下を切っておく
     if img_path:
-        koma_num_str = os.path.basename(img_path).split('-')[-1][0]
+        koma_num_str = os.path.basename(img_path).split("-")[-1][0]
         if koma_num_str.isdigit() and int(koma_num_str) % 4 == 0:
             if img_gray is None:
                 return
-            img_gray = img_gray[:img_gray.shape[0] - (adc.padding_y - 4), :]
+            img_gray = img_gray[: img_gray.shape[0] - (adc.padding_y - 4), :]
 
     # --- looming_wall
     left, right, top, bottom = looming_wall.search_looming_wallpoint(img_gray)
-    img_out = img[top: bottom, left: right]
+    img_out = img[top:bottom, left:right]
 
     # --- average_diff_cut: cut後のサイズが大きいものはAverageDiff法で余分なところを除去
     pad_left, pad_right = 0, 0
@@ -174,8 +182,8 @@ def hybrid_cut(img=None, img_path=''):
     if width > 360:
         adc.diff_threshold = 90
 
-        cp = adc.search_cut_point(img_gray[top: bottom, left: right])
-        x = np.array(cp['x'])
+        cp = adc.search_cut_point(img_gray[top:bottom, left:right])
+        x = np.array(cp["x"])
         x = np.append(x, [0, right])
         # 左側カットポイント
         pad_left = x[x <= adc.padding_x + 10].max()
@@ -187,7 +195,7 @@ def hybrid_cut(img=None, img_path=''):
     # 縦方向はいらなさそう？ 一応残しておく
     # y = np.array(cp['y'])
     # pad_y = y[1] if len(y) > 1 and y[1] <= adc.padding_y else 0
-    img_out = img[top: bottom, int(left + pad_left): int(right - pad_right)]
+    img_out = img[top:bottom, int(left + pad_left) : int(right - pad_right)]
     # print(top, bottom, int(left + pad_left), int(right - pad_right))
     # print('img_out', img_out.shape)
 
@@ -199,6 +207,6 @@ def hybrid_cut(img=None, img_path=''):
 
     # print('img_out_gray', img_out_gray.shape)
     left, right, top, bottom = looming_wall.search_looming_wallpoint(img_out_gray)
-    img_out = img_out[top: bottom, left: right]
+    img_out = img_out[top:bottom, left:right]
 
     return img_out

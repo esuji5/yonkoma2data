@@ -17,7 +17,7 @@ def get_canny(img, gf_size=5, min_t=50, max_t=150):
 
 
 def parse_contours(contours):
-    '''contours: [x, y, w, h, size]'''
+    """contours: [x, y, w, h, size]"""
     left_cons, right_cons = [], []
     tobira = np.array([])
     # sizeで降順ソート
@@ -25,10 +25,12 @@ def parse_contours(contours):
     # 最外殻（ページ画像そのもの）を取り出しておく
     orig = sorted_cons.pop(0)
     orig_w, orig_h = orig[2], orig[3]
-    sorted_cons = [c for c in sorted_cons if not (c[2] > orig_w * 0.9 and c[3] > orig_h * 0.9)]
+    sorted_cons = [
+        c for c in sorted_cons if not (c[2] > orig_w * 0.9 and c[3] > orig_h * 0.9)
+    ]
 
     if len(sorted_cons) < 2:
-        print('contours　less than 2!')
+        print("contours　less than 2!")
         return left_cons, right_cons, tobira
 
     # 扉絵らしきものがあれば取り出しておく
@@ -63,7 +65,11 @@ def make_paint_out_img(img, canny, verify=False):
     orig = contours.pop(0)
     orig_width, orig_height = orig[2], orig[3]
     # 最外殻以外で大きすぎるものを除外
-    contours = [c for c in contours if not (c[2] > orig_width * 0.9 and c[3] > orig_height * 0.9)]
+    contours = [
+        c
+        for c in contours
+        if not (c[2] > orig_width * 0.9 and c[3] > orig_height * 0.9)
+    ]
 
     if not contours:
         return
@@ -84,5 +90,5 @@ def make_paint_out_img(img, canny, verify=False):
         img_p = cv2.rectangle(img, (x, y), (x + w, y + h), color, -1)
 
         if verify:
-            img_p[veryfy_pix * idx: veryfy_pix * idx + veryfy_pix, :veryfy_pix] = color
+            img_p[veryfy_pix * idx : veryfy_pix * idx + veryfy_pix, :veryfy_pix] = color
     return img_p

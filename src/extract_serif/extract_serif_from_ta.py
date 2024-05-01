@@ -1,21 +1,35 @@
 import os
 import pathlib
-from collections import defaultdict
 import re
 import unicodedata
+from collections import defaultdict
 
 import cv2
 import numpy as np
 
-import utils
-from extract_serif.joyo_kanji import JOYO_KANJI
+from joyo_kanji import JOYO_KANJI
 
-
-SKIP_SIZE_EVAL_LIST = {'!', '?', '一', '...', '…', 'が', 'か', 'く', 'へ', 'と', '1', '2', '3'}
-SKIP_LONG_WIDTH_LIST = {'一', 'が', 'か'}
-SKIP_NG_WORD_LIST = {'1', '2', '3', '8', 'UFO'}
-RE_BALLOON_NG_MATCH = re.compile('(^[0-9]{2,}$|^[a-zA-Z()\-\\\/%:;\"\'\.,_"!ー]{1,}[0-9a-zA-Z]?|^フ$|^℃$|^ù$|廿|仃|另|יו)',
-                                 re.UNICODE)
+SKIP_SIZE_EVAL_LIST = {
+    "!",
+    "?",
+    "一",
+    "...",
+    "…",
+    "が",
+    "か",
+    "く",
+    "へ",
+    "と",
+    "1",
+    "2",
+    "3",
+}
+SKIP_LONG_WIDTH_LIST = {"一", "が", "か"}
+SKIP_NG_WORD_LIST = {"1", "2", "3", "8", "UFO"}
+RE_BALLOON_NG_MATCH = re.compile(
+    '(^[0-9]{2,}$|^[a-zA-Z()\-\\\/%:;"\'\.,_"!ー]{1,}[0-9a-zA-Z]?|^フ$|^℃$|^ù$|廿|仃|另|יו)',
+    re.UNICODE,
+)
 NG_HEIGHT_RATIO = 0.03
 NG_LONG_WIDTH_RATIO = 1.3
 NG_LONG_WIDTH_RATIO = 2.5
@@ -28,7 +42,7 @@ class TA:
 
 
 class Koma:
-    def __init__(self, img_path='', ta_in_koma=[]):
+    def __init__(self, img_path="", ta_in_koma=[]):
         if img_path:
             self.img_path = img_path
             self.img = cv2.imread(img_path)
@@ -47,7 +61,9 @@ class Koma:
             text = ta.description
             if self.filter_ta_text(text):
                 # text = clean_text(text)
-                new_ta_in_koma.append(TA(text, self._define_rect(ta.bounding_poly.vertices)))
+                new_ta_in_koma.append(
+                    TA(text, self._define_rect(ta.bounding_poly.vertices))
+                )
         self.ta_in_koma = new_ta_in_koma
 
     def filter_ta_text(self, text):
@@ -61,18 +77,22 @@ class Koma:
         # ref. http://minus9d.hatenablog.com/entry/2015/07/16/231608
         name = unicodedata.name(char)
         japanese_char = ("CJK UNIFIED", "HIRAGANA", "KATAKANA")
-        if name.startswith(japanese_char) or "MARK" in name or 'HORIZONTAL ELLIPSIS' in name:
+        if (
+            name.startswith(japanese_char)
+            or "MARK" in name
+            or "HORIZONTAL ELLIPSIS" in name
+        ):
             return True
         return False
 
     def _define_rect(self, positions):
-        '''
+        """
         yokogaki_positions: [left_top, right_top, right_bottom, left_bottom]
         tategaki_positions: [right_top, right_bottom, left_bottom, left_top]
         rect: [w, h, rw, rh]
-        '''
+        """
         if positions[2].x - positions[0].x > 0:
-#             print('yokogaki!')
+            #             print('yokogaki!')
             lt, rt, rb, lb = positions  # yokogaki
         elif positions[2].x - positions[0].x <= 0:
             rt, rb, lb, lt = positions  # tategaki
@@ -87,14 +107,17 @@ class Koma:
         # NGリストの文字は多分不正
         if ta.text not in SKIP_NG_WORD_LIST:
             if RE_BALLOON_NG_MATCH.search(ta.text):
-                print('NG Word: {}'.format(ta.text))
+                print("NG Word: {}".format(ta.text))
                 return False
             elif len(ta.text) == 1:
                 if not self._is_japanese_char(ta.text):
-                    print('NG char: {}'.format(ta.text))
+                    print("NG char: {}".format(ta.text))
                     return False
-                elif "CJK UNIFIED" in unicodedata.name(ta.text) and ta.text not in JOYO_KANJI:
-                    print('NG KANJI: {}'.format(ta.text))
+                elif (
+                    "CJK UNIFIED" in unicodedata.name(ta.text)
+                    and ta.text not in JOYO_KANJI
+                ):
+                    print("NG KANJI: {}".format(ta.text))
                     return False
 
         area_width, area_height = ta.rect[2:]
@@ -102,22 +125,36 @@ class Koma:
         # 小さすぎる領域は多分不正。でもSKIP_SIZE_EVAL_LISTに入っている文字は間違いやすいからここをSKIP
         if ta.text not in SKIP_SIZE_EVAL_LIST:
             if area_height < self.height * NG_HEIGHT_RATIO:
-                print('NG small area height: {}'.format(ta.text))
-                print('{} < {} * {} = {}'.format(area_height, self.height, NG_HEIGHT_RATIO,
-                                                 self.height * NG_HEIGHT_RATIO))
+                print("NG small area height: {}".format(ta.text))
+                print(
+                    "{} < {} * {} = {}".format(
+                        area_height,
+                        self.height,
+                        NG_HEIGHT_RATIO,
+                        self.height * NG_HEIGHT_RATIO,
+                    )
+                )
                 return False
             if area_width < self.width * (NG_HEIGHT_RATIO - 0.01):
-                print('NG small area width: {}'.format(ta.text))
-                print('{} < {} * {} = {}'.format(area_width, self.width, NG_HEIGHT_RATIO,
-                                                 self.width * NG_HEIGHT_RATIO))
+                print("NG small area width: {}".format(ta.text))
+                print(
+                    "{} < {} * {} = {}".format(
+                        area_width,
+                        self.width,
+                        NG_HEIGHT_RATIO,
+                        self.width * NG_HEIGHT_RATIO,
+                    )
+                )
                 return False
 
         # 横長の領域は多分不正
         if ta.text not in SKIP_LONG_WIDTH_LIST:
             if area_width > area_height * NG_LONG_WIDTH_RATIO:
-                print('NG long width: {}'.format(ta.text))
-                print('{} > {} * {}'.format(area_width, area_height, NG_LONG_WIDTH_RATIO))
-                    # return False
+                print("NG long width: {}".format(ta.text))
+                print(
+                    "{} > {} * {}".format(area_width, area_height, NG_LONG_WIDTH_RATIO)
+                )
+                # return False
 
         return True
 
@@ -147,32 +184,69 @@ class Koma:
             # 塗りつぶしを行い、塗りつぶし範囲のrectを取得
             pre_flooded = flooded_try.copy()
             _, img_fl, _, flood_rect = cv2.floodFill(
-                flooded_try, mask, target, newVal=(30, 100, 220), loDiff=(5, 5, 5), upDiff=(250, 250, 250))
+                flooded_try,
+                mask,
+                target,
+                newVal=(30, 100, 220),
+                loDiff=(5, 5, 5),
+                upDiff=(250, 250, 250),
+            )
             x, y, rw, rh = flood_rect
             area = rw * rh
-            img_fl[target[1] - 5:target[1] + 5, target[0] - 5:target[0] + 5] = (255, 0, 100)
+            img_fl[target[1] - 5 : target[1] + 5, target[0] - 5 : target[0] + 5] = (
+                255,
+                0,
+                100,
+            )
 
             # 塗りつぶした範囲が適正なら吹き出しと判断
             is_nice_x_range = self.width * 0.1 < rw < self.width * 0.7
             is_nice_y_range = self.height * 0.1 < rh < self.height * 0.999
             is_nice_area = 0.03 < area / (self.width * self.height) < 0.45
-            rect_mean_val = (self.img[y:y + rh, x:x + rw] > 200).mean()
+            rect_mean_val = (self.img[y : y + rh, x : x + rw] > 200).mean()
             is_white = rect_mean_val > 0.68
-            if area and is_nice_x_range and is_nice_y_range and is_nice_area and is_white:
+            if (
+                area
+                and is_nice_x_range
+                and is_nice_y_range
+                and is_nice_area
+                and is_white
+            ):
                 flood_rect_set.add(flood_rect)
             else:
                 flooded_try = pre_flooded
 
             # display(Image.fromarray(canny[y-off:y+rh+off, x-off:x+rw+off]))
             # display(Image.fromarray(img_fl))
-            print(ta.text, target, flood_rect, area, is_nice_x_range, is_nice_y_range, is_nice_area, is_white)
-            print(self.width * 0.1, rw, self.width * 0.7, '|', self.height * 0.1, rh, self.height * 0.999,
-                  '|', 0.03, area / (self.width * self.height), 0.45, rect_mean_val)
+            print(
+                ta.text,
+                target,
+                flood_rect,
+                area,
+                is_nice_x_range,
+                is_nice_y_range,
+                is_nice_area,
+                is_white,
+            )
+            print(
+                self.width * 0.1,
+                rw,
+                self.width * 0.7,
+                "|",
+                self.height * 0.1,
+                rh,
+                self.height * 0.999,
+                "|",
+                0.03,
+                area / (self.width * self.height),
+                0.45,
+                rect_mean_val,
+            )
             # print(target, rect, area, bp['text'], area / (w*h), rect_mean_val)
         # xの降順、yの昇順でソート。右上の吹き出しから順番になるように
         s = sorted(flood_rect_set, key=lambda x: x[1], reverse=False)
         rect_list = sorted(s, key=lambda x: x[0] + x[2], reverse=True)
-        print('rects:', len(rect_list), rect_list)
+        print("rects:", len(rect_list), rect_list)
         self.balloon_rect_list = rect_list
 
     def devide_ta_by_balloon_area(self):
@@ -202,12 +276,18 @@ class Koma:
                 r_area = ta_rw * ta_rh
                 r_area_sum += r_area
             if np.abs(r_area_sum / area) < 0.02:
-                print('dame?', ''.join([ta.text for ta in split_tas]), area, r_area_sum, r_area_sum / area)
+                print(
+                    "dame?",
+                    "".join([ta.text for ta in split_tas]),
+                    area,
+                    r_area_sum,
+                    r_area_sum / area,
+                )
             else:
-                serif = ''.join([ta.text for ta in split_tas])
+                serif = "".join([ta.text for ta in split_tas])
                 print(cnt, serif, area, r_area_sum, r_area_sum / area)
                 serif_list.append([rect, serif])
                 cnt += 1
-        print('------------------------------------------------------')
+        print("------------------------------------------------------")
         self.serif_list = serif_list
         return serif_list

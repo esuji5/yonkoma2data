@@ -17,7 +17,7 @@ import utils
 def pdf_to_png(root_path):
     for dirpath, _, filenames in os.walk(root_path):
         for filename in filenames:
-            if not filename.endswith('.pdf'):
+            if not filename.endswith(".pdf"):
                 continue
             # if 'kurumi' not in filename:
             #     continue
@@ -30,25 +30,30 @@ def pdf_to_png(root_path):
                 continue
 
             pdf_path = os.path.join(dirpath, filename)
-            png_path = os.path.join(output_path, 'image-%03d.jpg')
+            png_path = os.path.join(output_path, "image-%03d.jpg")
             # png_path = os.path.join(output_path, 'image-%03d.png')
 
-            argv = ['convert',
-                    '-define', 'jpeg:size={0}x{0}'.format(config.MAX_HEIGHT),  # 大きい画像を変換するときに速くなるかも
-                    # '-deskew', '40%',  # 傾きを補正
-                    '-density', str(config.DENSITY_LOW),  # 解像度を指定。未指定は72dpiになってしまう
-                    # '-geometry', '{0}x{0}'.format(MAX_HEIGHT),  # 最大の画像大きさを指定。縦横比は守られる
-                    pdf_path, png_path]
+            argv = [
+                "convert",
+                "-define",
+                "jpeg:size={0}x{0}".format(config.MAX_HEIGHT),  # 大きい画像を変換するときに速くなるかも
+                # '-deskew', '40%',  # 傾きを補正
+                "-density",
+                str(config.DENSITY_LOW),  # 解像度を指定。未指定は72dpiになってしまう
+                # '-geometry', '{0}x{0}'.format(MAX_HEIGHT),  # 最大の画像大きさを指定。縦横比は守られる
+                pdf_path,
+                png_path,
+            ]
 
-            print('exec_code: {}'.format(argv))
-            with utils.timer('convert: {} -> {}'.format(pdf_path, png_path)):
-            # print('convert: {} -> {}'.format(pdf_path, png_path))
+            print("exec_code: {}".format(argv))
+            with utils.timer("convert: {} -> {}".format(pdf_path, png_path)):
+                # print('convert: {} -> {}'.format(pdf_path, png_path))
 
                 # コマンドを実行
                 if subprocess.call(argv) != 0:
-                    print('failed: {}'.format(pdf_path))
+                    print("failed: {}".format(pdf_path))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     root_path = utils.check_argv_path(sys.argv)
     pdf_to_png(root_path)
