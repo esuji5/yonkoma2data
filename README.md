@@ -1,5 +1,7 @@
 # yonkoma2data
 
+**2024.05.04現在、Pythonや関係ライブラリ、処理内容を大幅にアップデートしています。**
+
 ## description
 漫画のデジタルデータについて、以下の様な処理を行えます
 - PDFファイルのバーコード（JANコード）を読み取り自動リネーム
@@ -9,7 +11,7 @@
 - ページ毎のPNGファイルを1コマ毎のPNGファイルに切り出す
 - コマ中のセリフを抽出する
 
-Python3系とOpenCVを基本として用途に応じて、ImageMagick、zbar等のインストール、Amazon Product Advertising API、Google Cloud Platformのアカウントが必要になります。
+Python3系とOpenCVを基本として用途に応じて、ImageMagick、zbar等のインストール、Google Cloud Platformのアカウントが必要になります。
 
 ## TODO
 - サンプルに使える画像ファイルを用意
@@ -17,13 +19,12 @@ Python3系とOpenCVを基本として用途に応じて、ImageMagick、zbar等�
 - セリフ抜き出しは上下吹き出し対応ができたらコミット予定
 
 ## prepare
-- install Python3 (3.6以上) http://www.python.jp/
-- install OpenCV (3.0以上) http://opencv.jp/
+- install Python3 (3.12) http://www.python.jp/
 
 ```
 $ git clone https://github.com/esuji5/yonkoma2data
 $ cd yonkoma2data
-$ pip install -r requirement.txt
+$ pip install -r requirements.txt
 ```
 
 ## PDFファイルのバーコード（JANコード）を読み取り自動リネーム
@@ -31,12 +32,11 @@ $ pip install -r requirement.txt
 ### require
 - install zbar(http://zbar.sourceforge.net/)
 - install ImageMagick(http://www.imagemagick.org/script/index.php)
-- prepare Amazon Product Advertising API(https://affiliate.amazon.co.jp/gp/advertising/api/detail/main.html)
-- key_amazon.pyに↑のID、Keyを入力
 - リネームしたいpdfファイル群を入れたディレクトリ
 
 ### run
-`$ python pdf_renamer.py path/to/pdffiles_dir`
+※ファイルを直接リネームするので、念の為ディレクトリ毎コピーを取るのを推奨します
+`$ python pdf_renamer_by_isbn.py path/to/pdffiles_dir`
 
 ## PDFファイルをページ毎のPNGファイルに切り出す
 ### require
@@ -45,12 +45,14 @@ $ pip install -r requirement.txt
 - ↑を日本語パスが含まれない場所に移動・リネーム(OpenCVが日本語含みのパスを読み込めないため)
 
 ### run
-`$ python pdf_to_jpg.py path/to/pdffiles_dir`
+`$ python pdf_to_pages.py path/to/pdffiles_dir`
+
+**↑2024.05.04現在、アップデート完了ここまで ↑**
 
 ## 傾き補正、美白化を行う
-`$ cd path/to/jpgs`
+`$ cd path/to/pages`
 
-`$ mogrify -level 25%,83% -deskew 40% -density 200 *.jpg`
+`$ mogrify -level 25%,83% -deskew 40% -density 200 *.png`
 - 以下の値は適宜調整する
     - 傾き補正度 `-deskew`: 35~45%程度
     - 美白度 `-level`: {下限}, {上限}
@@ -59,11 +61,10 @@ $ pip install -r requirement.txt
 ## ページ毎のJPGファイルを1コマ毎のJPGファイルに切り出す。多くの作品に対応版
 ### require
 - ページ毎の画像を入れたディレクトリ
-- Python3.6
-- OpenCV 3.4
+- Python3.12
 
 ### run
-`$ python amane_cut.py path/to/image_dir`
+`$ python amane_cut.py path/to/pages`
 
 ### args
 | args name | default | more |
