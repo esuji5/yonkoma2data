@@ -8,13 +8,59 @@ import subprocess
 import time
 from contextlib import contextmanager
 from os.path import basename, join
+from typing import Optional, Union
 
 import cv2
 import numpy as np
+from PIL.Image import Image as PILImageType
 
 
-def check_argv_path(argv: list) -> str:
-    """指定のディレクトリパスを存在チェック"""
+def pil2cv(image_pil: PILImageType) -> np.ndarray:
+    """
+    refs. https://qiita.com/derodero24/items/f22c22b22451609908ee
+    PIL型 -> OpenCV型"""
+    new_image = np.array(image_pil, dtype=np.uint8)
+    if new_image.ndim == 2:  # モノクロ
+        pass
+    elif new_image.shape[2] == 3:  # カラー
+        new_image = cv2.cvtColor(new_image, cv2.COLOR_RGB2BGR)
+    elif new_image.shape[2] == 4:  # 透過
+        new_image = cv2.cvtColor(new_image, cv2.COLOR_RGBA2BGRA)
+    return new_image
+
+
+def cv2pil(image_cv: np.ndarray) -> PILImageType:
+    """OpenCV型 -> PIL型"""
+    new_image = image_cv.copy()
+    if new_image.ndim == 2:  # モノクロ
+        pass
+    elif new_image.shape[2] == 3:  # カラー
+        new_image = cv2.cvtColor(new_image, cv2.COLOR_BGR2RGB)
+    elif new_image.shape[2] == 4:  # 透過
+        new_image = cv2.cvtColor(new_image, cv2.COLOR_BGRA2RGBA)
+    new_image = Image.fromarray(new_image)
+    return new_image
+
+
+def check_work_dir():
+    work_dir_path = make_outdir("./", "work_dir")
+    return work_dir_path
+
+
+def check_argv_path(argv: Union[argparse.Namespace, list[str]]) -> str:
+    """
+    指定のディレクトリパスを存在チェック
+
+    Args:
+        argv (argparse.Namespace or list[str]): コマンドライン引数または引数リスト
+
+    Returns:
+        str: ディレクトリパス
+
+    Raises:
+        IOError: ディレクトリパスが指定されていない場合
+        IOError: ディレクトリが存在しない場合
+    """
     if isinstance(argv, argparse.Namespace):
         target_dir = argv.filepath
     else:
@@ -30,7 +76,16 @@ def check_argv_path(argv: list) -> str:
 
 
 def make_outdir(image_dir: str, dir_name: str) -> str:
-    """書き出し用ディレクトリを作成"""
+    """
+    書き出し用ディレクトリを作成
+
+    Args:
+        image_dir (str): 画像ディレクトリパス
+        dir_name (str): ディレクトリ名
+
+    Returns:
+        str: 書き出し用ディレクトリパス
+    """
     output_path = join(image_dir, dir_name)
     # print('書き出しディレクトリ:', output_path)
     if not os.path.exists(output_path):
@@ -38,13 +93,34 @@ def make_outdir(image_dir: str, dir_name: str) -> str:
     return output_path
 
 
-def make_outdir_from_file(file_path):
-    """書き出し用ディレクトリを作成"""
+def make_outdir_from_file(file_path: str) -> str:
+    """
+    書き出し用ディレクトリを作成
+
+    Args:
+        file_path (str): ファイルパス
+
+    Returns:
+        str: 書き出し用ディレクトリパス
+    """
     output_path = make_outdir(os.path.dirname(file_path), basename(file_path)[:-4])
     return output_path
 
 
-def img_resize(img, rate=0.5, max_height=None):
+def img_resize(
+    img: np.ndarray, rate: float = 0.5, max_height: Optional[int] = None
+) -> np.ndarray:
+    """
+    画像のリサイズ
+
+    Args:
+        img (np.ndarray): 入力画像
+        rate (float, optional): リサイズ倍率. Defaults to 0.5.
+        max_height (int, optional): リサイズ後の最大高さ. Defaults to None.
+
+    Returns:
+        np.ndarray: リサイズ後の画像
+    """
     h, w = img.shape[:2]
     if max_height:
         resized_img = cv2.resize(img, (int(w * max_height / h), max_height))
@@ -53,12 +129,35 @@ def img_resize(img, rate=0.5, max_height=None):
     return resized_img
 
 
-def img_to_gray(img):
+def img_to_gray(img: np.ndarray) -> np.ndarray:
+    """
+    カラー画像をグレースケールに変換
+
+    Args:
+        img (np.ndarray): 入力画像
+
+    Returns:
+        np.ndarray: グレースケール画像
+    """
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     return gray
 
 
-def img_to_canny(img, gf_size=5, min_t=50, max_t=150):
+def img_to_canny(
+    img: np.ndarray, gf_size: int = 5, min_t: int = 50, max_t: int = 150
+) -> np.ndarray:
+    """
+    画像をCannyエッジ検出処理を適用した画像に変換
+
+    Args:
+        img (np.ndarray): 入力画像
+        gf_size (int, optional): ガウシアンフィルタのカーネルサイズ. Defaults to 5.
+        min_t (int, optional): Cannyエッジ検出の下限閾値. Defaults to 50.
+        max_t (int, optional): Cannyエッジ検出の上限閾値. Defaults to 150.
+
+    Returns:
+        np.ndarray: Cannyエッジ検出処理を適用した画像
+    """
     if len(img.shape) == 3:
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     else:
@@ -68,7 +167,20 @@ def img_to_canny(img, gf_size=5, min_t=50, max_t=150):
     return canny
 
 
-def make_outdir_of_imgfile(img_path, outdir_name="out", add_name="_out"):
+def make_outdir_of_imgfile(
+    img_path: str, outdir_name: str = "out", add_name: str = "_out"
+) -> str:
+    """
+    画像ファイルの書き出し用ディレクトリを作成
+
+    Args:
+        img_path (str): 画像ファイルパス
+        outdir_name (str, optional): 書き出し用ディレクトリ名. Defaults to "out".
+        add_name (str, optional): 追加するファイル名. Defaults to "_out".
+
+    Returns:
+        str: 書き出し用ファイルパス
+    """
     img_dirname = os.path.dirname(img_path)
     outdir = join(img_dirname, outdir_name)
     if not os.path.exists(outdir):
@@ -77,8 +189,14 @@ def make_outdir_of_imgfile(img_path, outdir_name="out", add_name="_out"):
     return join(outdir, new_img_name)
 
 
-def pickle_dump(value, filename="out.pickle"):
-    """pickleファイルを保存"""
+def pickle_dump(value, filename: str = "out.pickle") -> None:
+    """
+    pickleファイルにオブジェクトを保存
+
+    Args:
+        value: 保存するオブジェクト
+        filename (str, optional): 保存するファイル名. Defaults to "out.pickle".
+    """
     with open(filename, "wb") as f:
         try:
             pickle.dump(value, f)
@@ -86,15 +204,31 @@ def pickle_dump(value, filename="out.pickle"):
             pickle.dump([value], f)
 
 
-def pickle_load(filename="out.pickle"):
-    """pickleファイルを読み込み"""
+def pickle_load(filename: str = "out.pickle"):
+    """
+    pickleファイルからオブジェクトを読み込み
+
+    Args:
+        filename (str, optional): 読み込むファイル名. Defaults to "out.pickle".
+
+    Returns:
+        Any: 読み込んだオブジェクト
+    """
     with open(filename, "rb") as f:
         return pickle.load(f)
 
 
-def get_path_list(image_dir, target_name):
-    """ディレクトリ中のtarge_nameを持つファイルパスを取得"""
-    # print(glob.escape(image_dir))
+def get_path_list(image_dir: str, target_name: str) -> list[str]:
+    """
+    ディレクトリ中の指定のファイルパスを取得
+
+    Args:
+        image_dir (str): ディレクトリパス
+        target_name (str): 検索するファイル名
+
+    Returns:
+        list[str]: ファイルパスのリスト
+    """
     glob_res = glob.glob(join(glob.escape(image_dir), "*{}*".format(target_name)))
     if glob_res:
         return glob_res
@@ -106,8 +240,16 @@ def get_path_list(image_dir, target_name):
         return path_list
 
 
-def get_image_path_list(image_dir):
-    """ディレクトリ中の画像ファイルパスを取得"""
+def get_image_path_list(image_dir: str) -> list[str]:
+    """
+    ディレクトリ中の画像ファイルパスを取得
+
+    Args:
+        image_dir (str): ディレクトリパス
+
+    Returns:
+        list[str]: 画像ファイルパスのリスト
+    """
     image_path_list = get_path_list(image_dir, "*jpg")
     image_path_list.extend(get_path_list(image_dir, "*JPG"))
     image_path_list.extend(get_path_list(image_dir, "*png"))
@@ -116,10 +258,16 @@ def get_image_path_list(image_dir):
     return image_path_list
 
 
-def generate_senga(img_src, n=4):
-    """線画を得る。近傍法の指定は[4, 8, 24]から。値が大きいほどはっきりした線を得られる
-    refs. https://www.blog.umentu.work/python-opencv3%E3%81%A7%E7%94%BB%E7%B4%A0%E3%81%AE%E8%86%A8%E5%BC%B5%E5%87%A6%E7%90%86dilation%E3%81%A8%E5%8F%8E%E7%B8%AE%E5%87%A6%E7%90%86erosion-%E3%81%A1%E3%82%87%E3%81%A3%E3%81%A8%E8%A7%A3/
-    refs. http://www.cellstat.net/absdiff/
+def generate_senga(img_src: np.ndarray, n: int = 4) -> np.ndarray:
+    """
+    線画を生成する
+
+    Args:
+        img_src (np.ndarray): 入力画像
+        n (int, optional): 近傍法の指定. Defaults to 4.
+
+    Returns:
+        np.ndarray: 線画
     """
     # 4近傍の定義
     neiborhood4 = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], np.uint8)
