@@ -18,7 +18,7 @@ pymupdfb==1.24.1
 pyppeteer==2.0.0
 pyquery==2.0.0
 pyzbar==0.1.9
-requests==2.31.0
+requests==2.32.0
 requests-html==0.10.0
 soupsieve==2.5
 tqdm==4.66.4
