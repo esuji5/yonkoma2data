@@ -23,7 +23,7 @@ requests-html==0.10.0
 soupsieve==2.5
 tqdm==4.66.4
 typing-extensions==4.11.0
-urllib3==1.26.18
+urllib3==1.26.19
 w3lib==2.1.2
 websockets==10.4
 zipp==3.18.1
