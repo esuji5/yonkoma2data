@@ -15,7 +15,7 @@ Python3系とOpenCVを基本として用途に応じて、ImageMagick、zbar等�
 
 ## TODO
 - サンプルに使える画像ファイルを用意
-- テストコード色々用意
+- テストコードの拡充とメンテナンス (基本的なユニットテストカバレッジを追加済み)
 - セリフ抜き出しは上下吹き出し対応ができたらコミット予定
 
 ## prepare
@@ -26,6 +26,24 @@ $ git clone https://github.com/esuji5/yonkoma2data
 $ cd yonkoma2data
 $ pip install -r requirements.txt
 ```
+
+## Running Tests (テストの実行)
+
+This project uses `pytest` for unit testing. Ensure you have installed the development dependencies (which includes `pytest` via `requirements.txt`).
+
+To run all tests, navigate to the root directory of the project and execute:
+
+```bash
+pytest
+```
+
+Or:
+
+```bash
+python -m pytest
+```
+
+Tests are located in the `tests/` directory.
 
 ## PDFファイルのバーコード（JANコード）を読み取り自動リネーム
 **TODO: AWSのライブラリ最新版にしたい**
