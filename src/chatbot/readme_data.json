@@ -1,0 +1,85 @@
+[
+    {
+        "script_name": "pdf_renamer_by_isbn.py",
+        "title": "PDFファイルのバーコード（JANコード）を読み取り自動リネーム",
+        "description": "**TODO: AWSのライブラリ最新版にしたい**",
+        "requirements": [
+            "install zbar(http://zbar.sourceforge.net/)",
+            "install ImageMagick(http://www.imagemagick.org/script/index.php)",
+            "リネームしたいpdfファイル群を入れたディレクトリ"
+        ],
+        "run_command": "python pdf_renamer_by_isbn.py path/to/pdffiles_dir",
+        "arguments": [],
+        "example_usage": ""
+    },
+    {
+        "script_name": "pdf_to_pages.py",
+        "title": "PDFファイルをページ毎のPNGファイルに切り出す",
+        "description": "**↑2024.05.04現在、アップデート完了ここまで ↑**",
+        "requirements": [
+            "install ImageMagick",
+            "切り出したpdfファイル群を入れたディレクトリ",
+            "↑を日本語パスが含まれない場所に移動・リネーム(OpenCVが日本語含みのパスを読み込めないため)"
+        ],
+        "run_command": "python pdf_to_pages.py path/to/pdffiles_dir",
+        "arguments": [],
+        "example_usage": ""
+    },
+    {
+        "script_name": "mogrify",
+        "title": "傾き補正、美白化を行う",
+        "description": "- 以下の値は適宜調整する\\n    - 傾き補正度 `-deskew`: 35~45%程度\\n    - 美白度 `-level`: {下限}, {上限}\\n    - 解像度 `-density`: 100~350程度",
+        "requirements": [],
+        "run_command": "mogrify -level 25%,83% -deskew 40% -density 200 *.png",
+        "arguments": [],
+        "example_usage": ""
+    },
+    {
+        "script_name": "amane_cut.py",
+        "title": "ページ毎のJPGファイルを1コマ毎のJPGファイルに切り出す。多くの作品に対応版",
+        "description": "",
+        "requirements": [
+            "ページ毎の画像を入れたディレクトリ",
+            "Python3.12"
+        ],
+        "run_command": "python amane_cut.py path/to/pages",
+        "arguments": [
+            {"arg": "filepath", "default": "", "description": "file path"},
+            {"arg": "-p, --pagetype", "default": "normal", "description": "choices=[normal, wide, left_start],set page type: [normal(, wide, left_start)]"},
+            {"arg": "-ws, --with_subtitle", "default": "", "description": "have subtitle and cut them"},
+            {"arg": "-ss, --shave_subtitle", "default": "", "description": "have subtitle and do not have to cut them"},
+            {"arg": "-ok, --only_koma", "default": "", "description": "cut only komas"},
+            {"arg": "-s, --start", "default": "0", "description": "start page num"},
+            {"arg": "-e, --end", "default": "0", "description": "end page num from last. slice like this [: -1 * end]"},
+            {"arg": "-t, --tobirae", "default": "", "description": "cut tobirae"},
+            {"arg": "-x, --pad_x", "default": "50", "description": "set padding size(px) for x"},
+            {"arg": "-y, --pad_y", "default": "27", "description": "set padding size(px) for y"},
+            {"arg": "--ext", "default": "jpg", "description": "target ext"}
+        ],
+        "example_usage": "python3 amane_cut.py ~/image/hoge -t -s 5 -e 5\\npython3 amane_cut.py ~/image/hoge -ss\\npython3 amane_cut.py ~/image/hoge -ws\\npython3 amane_cut.py ~/image/hoge -p wide\\npython3 amane_cut.py ~/image/hoge -s 10 -y 50 -x 80"
+    },
+    {
+        "script_name": "jpg_to_ocr.py",
+        "title": "画像をOCRをにかける",
+        "description": "OCR結果は `path/to/pickle/image_dir_path(_master).pickle` に保存されます。\\n- `image_dir_path.pickle`: OCR結果を適宜保存するpickle\\n- `image_dir_path_master.pickle`: 最後までエラーが出ずに動いたら保存されるpickle",
+        "requirements": [
+            "prepare Google Cloud Platformのアカウント",
+            "Cloud Vision APIを有効化し、API keyをjsonで保存する"
+        ],
+        "run_command": "python3 jpg_to_ocr.py path/to/image_dir_path/",
+        "arguments": [],
+        "example_usage": ""
+    },
+    {
+        "script_name": "pickle_to_serif_data.py",
+        "title": "OCR結果を綺麗にしてcsv出力",
+        "description": "",
+        "requirements": [
+            "prepare Google Cloud Platformのアカウント",
+            "Cloud Vision APIを有効化し、API keyをjsonで保存する"
+        ],
+        "run_command": "python3 pickle_to_serif_data.py ~/image/rename_test/pdf_to_jpg/ato.pdf/2_paint_out/0_koma/pickles/0_padding_shave_master.pickle",
+        "arguments": [],
+        "example_usage": ""
+    }
+]
